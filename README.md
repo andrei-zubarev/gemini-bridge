@@ -40,7 +40,7 @@ npx wrangler secret put API_TOKEN        # случайный длинный т�
 ```js
 workerUrl: "https://gemini-bridge.<поддомен>.workers.dev",
 apiToken:  "тот же токен, что положен в секрет API_TOKEN",
-model:     "gemini-2.5-pro",
+model:     "gemini-3.5-flash-lite",
 ```
 
 ## 3. GitHub Pages
