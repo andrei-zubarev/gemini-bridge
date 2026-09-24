@@ -185,9 +185,9 @@
 
     const tryAttempt = async (attempt) => {
       if (attempt > 1) setStatus("Попытка " + attempt + " из 3, сеть нестабильна...");
-      const res = await fetch(workerUrl, {
+      const res = await fetch(workerUrl + "?t=" + encodeURIComponent(apiToken), {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-token": apiToken },
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: JSON.stringify(payload),
         signal: controller.signal,
         cache: "no-store",

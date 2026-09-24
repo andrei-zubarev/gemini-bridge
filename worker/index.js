@@ -9,10 +9,11 @@ function json(obj, status, cors) {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
     const cors = {
       "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "content-type, x-api-token",
+      "Access-Control-Allow-Headers": "content-type",
       "Vary": "Origin",
     };
 
@@ -28,7 +29,7 @@ export default {
       return json({ error: "GEMINI_API_KEY is not set on the worker" }, 500, cors);
     }
 
-    const token = request.headers.get("x-api-token");
+    const token = url.searchParams.get("t") || request.headers.get("x-api-token");
     if (env.API_TOKEN && token !== env.API_TOKEN) {
       return json({ error: "Unauthorized" }, 401, cors);
     }
