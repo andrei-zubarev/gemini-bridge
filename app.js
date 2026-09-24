@@ -180,56 +180,74 @@
     const lastModelMsg = () => chat.messages.find((m) => m.pending);
 
     const controller = new AbortController();
-    const watchdog = setTimeout(() => controller.abort(), 90000);
+    const watchdog = setTimeout(() => controller.abort(), 120000);
     const t0 = Date.now();
 
-    try {
+    const tryAttempt = async (attempt) => {
+      if (attempt > 1) setStatus("Попытка " + attempt + " из 3, сеть нестабильна...");
       const res = await fetch(workerUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-token": apiToken },
         body: JSON.stringify(payload),
         signal: controller.signal,
+        cache: "no-store",
+        credentials: "omit",
       });
-
       if (!res.ok) {
         let data = null;
         try { data = await res.json(); } catch {}
-        const msg = data && data.error ? (data.details ? data.error : data.error) : "Ошибка " + res.status;
-        const p = lastModelMsg();
-        if (p) { p.pending = false; p.text = msg; p.error = true; }
-        saveChats();
-        renderMessages();
-        return;
+        return { error: data && data.error ? data.error : "Ошибка " + res.status };
       }
-
-      const p = lastModelMsg();
-      if (p) p.pending = false;
-
-      let gotAny = false;
-      setStatus("Запрос отправлен, ждём ответ...");
+      let out = "";
+      setStatus("Ждём ответ модели...");
       await readStream(res.body, (chunk) => {
-        gotAny = true;
+        out += chunk;
         setStatus("");
         const mm = lastModelMsg();
         if (mm) mm.text += chunk;
         updateLiveBubble(mm);
       });
+      return { out };
+    };
+
+    try {
+      let result = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          result = await tryAttempt(attempt);
+          if (result && result.out) break;
+          if (attempt < 3 && (!result || !result.out)) {
+            await new Promise((r2) => setTimeout(r2, 2500));
+            continue;
+          }
+        } catch (err) {
+          if (attempt < 3 && err.name !== "AbortError") {
+            await new Promise((r2) => setTimeout(r2, 2500));
+            continue;
+          }
+          throw err;
+        }
+      }
 
       const p2 = lastModelMsg();
-      if (p2 && !p2.text) {
+      if (p2) p2.pending = false;
+      if (result && result.error) {
         p2.error = true;
-        p2.text = "Пустой ответ от модели, попробуйте ещё раз. Если повторяется — смените модель в шапке.";
+        p2.text = result.error;
+        setStatus("Ответ с ошибкой: " + result.error);
+      } else if (!result || !result.out) {
+        p2.error = true;
+        p2.text = "Пустой ответ от модели. Попробуйте ещё раз или смените модель в шапке (если выбрана Pro — нужен платный план).";
       }
       saveChats();
       renderMessages();
-      if (gotAny) setStatus("");
     } catch (err) {
       const p = lastModelMsg();
       if (p) {
         p.pending = false;
         p.text = err.name === "AbortError"
-          ? "Ответ пришёл дольше 90 секунд. Попробуйте ещё раз или смените модель."
-          : "Ошибка сети: " + err.message;
+          ? "Ответ пришёл дольше 2 минут. Попробуйте ещё раз или смените модель."
+          : "Ошибка сети после 3 попыток: " + err.message;
         p.error = true;
       }
       saveChats();
