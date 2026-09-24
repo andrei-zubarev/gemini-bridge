@@ -15,9 +15,8 @@
 ## Структура
 
 ```
-public/          → UI (GitHub Pages)
+index.html, style.css, app.js, config.js → UI (GitHub Pages, корень репозитория)
   config.js      → workerUrl, apiToken, модель
-  index.html, style.css, app.js
 worker/index.js  → Cloudflare Worker (прокси)
 wrangler.toml    → конфиг worker'а
 ```
@@ -45,7 +44,7 @@ model:     "gemini-3.5-flash-lite",
 
 ## 3. GitHub Pages
 
-В настройках репозитория: **Settings → Pages → Deploy from a branch → main → /public**.
+В настройках репозитория: **Settings → Pages → Deploy from a branch → main → /(root)**.
 Сайт откроется на `https://andrei-zubarev.github.io/gemini-bridge/`.
 
 ## Локальная проверка
