@@ -101,6 +101,7 @@
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "model");
     if (meta && meta.error) wrap.className += " error";
+    if (meta && meta.id) wrap.dataset.mid = meta.id;
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
@@ -155,9 +156,9 @@
     }
 
     const chat = ensureChat();
-    chat.messages.push({ role: "user", text });
+    chat.messages.push({ role: "user", text, id: "u" + Date.now() });
     chat.title = chat.messages[0].text.slice(0, 40);
-    const pending = { role: "model", text: "", pending: true };
+    const pending = { role: "model", text: "", pending: true, id: "m" + Date.now() };
     chat.messages.push(pending);
     saveChats();
     renderMessages();
@@ -211,18 +212,13 @@
   }
 
   function updateLiveBubble(mm) {
-    const thread = els.messages.querySelector(".chat-thread");
-    if (!thread || !mm) return;
-    const bubbles = thread.querySelectorAll(".msg.model .bubble");
-    const idx = chatIndexOf(mm);
-    if (idx < 0 || idx >= bubbles.length) return;
-    bubbles[idx].innerHTML = mm.text ? mdToHtml(mm.text) : '<div class="typing"><span></span><span></span><span></span></div>';
+    if (!mm || !mm.id) return;
+    const node = els.messages.querySelector('[data-mid="' + mm.id + '"]');
+    if (!node) return;
+    const bubble = node.querySelector(".bubble");
+    if (!bubble) return;
+    bubble.innerHTML = mm.text ? mdToHtml(mm.text) : '<div class="typing"><span></span><span></span><span></span></div>';
     scrollBottom();
-  }
-
-  function chatIndexOf(target) {
-    const chat = currentChat();
-    return chat ? chat.messages.indexOf(target) : -1;
   }
 
   async function readStream(body, onChunk) {
