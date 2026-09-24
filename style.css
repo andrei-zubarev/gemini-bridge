@@ -316,6 +316,10 @@ html, body {
   color: var(--text-dim);
   text-align: center;
 }
+.composer-hint.status {
+  min-height: 14px;
+  color: #f2b8b5;
+}
 
 @media (max-width: 700px) {
   .sidebar { display: none; }

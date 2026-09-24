@@ -3,7 +3,7 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 function json(obj, status, cors) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { "Content-Type": "application/json", ...cors },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...cors },
   });
 }
 
@@ -97,7 +97,7 @@ async function streamResponse(model, contents, env, cors) {
     headers: {
       ...cors,
       "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
     },
   });
 }

@@ -3,5 +3,5 @@ main = "worker/index.js"
 compatibility_date = "2026-01-01"
 
 [vars]
-MODEL = "gemini-3.5-flash-lite"
+MODEL = "gemini-3.5-flash"
 ALLOWED_ORIGIN = "*"

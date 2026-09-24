@@ -136,6 +136,11 @@
     els.sendBtn.style.pointerEvents = busy ? "none" : "auto";
   }
 
+  function setStatus(text) {
+    const el = document.getElementById("statusLine");
+    if (el) el.textContent = text || "";
+  }
+
   async function send() {
     const text = els.input.value.trim();
     if (!text) return;
@@ -174,17 +179,22 @@
 
     const lastModelMsg = () => chat.messages.find((m) => m.pending);
 
+    const controller = new AbortController();
+    const watchdog = setTimeout(() => controller.abort(), 90000);
+    const t0 = Date.now();
+
     try {
       const res = await fetch(workerUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-token": apiToken },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
         let data = null;
         try { data = await res.json(); } catch {}
-        const msg = data && data.error ? (data.details ? data.error + "\n" + data.details : data.error) : "Ошибка " + res.status;
+        const msg = data && data.error ? (data.details ? data.error : data.error) : "Ошибка " + res.status;
         const p = lastModelMsg();
         if (p) { p.pending = false; p.text = msg; p.error = true; }
         saveChats();
@@ -194,19 +204,39 @@
 
       const p = lastModelMsg();
       if (p) p.pending = false;
+
+      let gotAny = false;
+      setStatus("Запрос отправлен, ждём ответ...");
       await readStream(res.body, (chunk) => {
+        gotAny = true;
+        setStatus("");
         const mm = lastModelMsg();
         if (mm) mm.text += chunk;
         updateLiveBubble(mm);
       });
+
+      const p2 = lastModelMsg();
+      if (p2 && !p2.text) {
+        p2.error = true;
+        p2.text = "Пустой ответ от модели, попробуйте ещё раз. Если повторяется — смените модель в шапке.";
+      }
       saveChats();
       renderMessages();
+      if (gotAny) setStatus("");
     } catch (err) {
       const p = lastModelMsg();
-      if (p) { p.pending = false; p.text = "Сеть недоступна: " + err.message; p.error = true; }
+      if (p) {
+        p.pending = false;
+        p.text = err.name === "AbortError"
+          ? "Ответ пришёл дольше 90 секунд. Попробуйте ещё раз или смените модель."
+          : "Ошибка сети: " + err.message;
+        p.error = true;
+      }
       saveChats();
       renderMessages();
     } finally {
+      clearTimeout(watchdog);
+      setStatus("");
       setBusy(false);
     }
   }
