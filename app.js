@@ -174,7 +174,7 @@
     const payload = {
       messages: chat.messages.filter((m) => !m.pending && !m.error).map((m) => ({ role: m.role, text: m.text })),
       model: els.modelSelect.value,
-      stream: true,
+      stream: false,
     };
 
     const lastModelMsg = () => chat.messages.find((m) => m.pending);
@@ -200,13 +200,18 @@
       }
       let out = "";
       setStatus("Ждём ответ модели...");
-      await readStream(res.body, (chunk) => {
-        out += chunk;
-        setStatus("");
-        const mm = lastModelMsg();
-        if (mm) mm.text += chunk;
-        updateLiveBubble(mm);
-      });
+      if (res.headers.get("content-type").includes("text/event-stream")) {
+        await readStream(res.body, (chunk) => {
+          out += chunk;
+          setStatus("");
+          const mm = lastModelMsg();
+          if (mm) mm.text += chunk;
+          updateLiveBubble(mm);
+        });
+      } else {
+        const data = await res.json();
+        out = data.text || data.error || "";
+      }
       return { out };
     };
 
@@ -238,6 +243,8 @@
       } else if (!result || !result.out) {
         p2.error = true;
         p2.text = "Пустой ответ от модели. Попробуйте ещё раз или смените модель в шапке (если выбрана Pro — нужен платный план).";
+      } else if (result.out) {
+        p2.text = result.out;
       }
       saveChats();
       renderMessages();
